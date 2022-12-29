@@ -14,7 +14,7 @@ public class ATAHAN_CALDIR_S018194 {
 
 			m.buildMachine(reader);
             m.buildTape();
-			m.startMachine(31);
+			m.startMachine(1);
             m.printResult();
 		}
 		catch (FileNotFoundException | InterruptedException e) {
@@ -38,6 +38,8 @@ class Transition {
         shift = s.charAt(7);
         nextState = s.substring(9);
     }
+
+    Transition(){}
 
     boolean isEqual(Transition t){
         if(t.currentState.equals(this.currentState) &&
@@ -122,15 +124,7 @@ class Machine {
     void buildTape(){
         String tapeString = "$";
 
-        for(int i=0; i<30; i++){
-            tapeString += blankSymbol;
-        }
-
         tapeString = tapeString.concat(inputString);
-
-        for(int i=0; i<30; i++){
-            tapeString += blankSymbol;
-        }
 
         tapeString += '$';
 
@@ -138,8 +132,9 @@ class Machine {
     }
 
     void startMachine(int index) throws InterruptedException{
-
-        ArrayList<Transition> lastThreeTransitions = new ArrayList<>();
+        Transition lastTransition = new Transition();
+        int lastIndex = 0;
+        int transitionCount = 0;
 
         while (!currentState.equals(acceptState) && !currentState.equals(rejectState)
                 && !currentState.equals(loopState)){
@@ -150,22 +145,9 @@ class Machine {
             for(Transition transition : state.transitions){
                 if(transition.read == Tape.charAt(index)){
                     
-                    if(lastThreeTransitions.size() == 3 &&
-                       ((transition.isEqual(lastThreeTransitions.get(1)) &&
-                       lastThreeTransitions.get(0).isEqual(lastThreeTransitions.get(2))) ||
-                       (transition.isEqual(lastThreeTransitions.get(2))))){
-        
+                    if(transitionCount != 0 && transition.isEqual(lastTransition) && lastIndex==index){
                         currentState = loopState;
                         break;
-                    }
-                    
-                    if(lastThreeTransitions.size() == 3){
-                        lastThreeTransitions.set(0, lastThreeTransitions.get(1));
-                        lastThreeTransitions.set(1, lastThreeTransitions.get(2));
-                        lastThreeTransitions.set(2, transition);
-                    }
-                    else{
-                        lastThreeTransitions.add(transition);
                     }
 
                     Tape.replace(index, index+1, 
@@ -173,17 +155,32 @@ class Machine {
                     
                     currentState = transition.nextState;
 
+                    lastIndex = index;
+
                     if(transition.shift == 'R'){
                         index++;
+
+                        if(index == Tape.length()-1){
+                            Tape.replace(Tape.length()-1, Tape.length(), 
+                                String.valueOf(blankSymbol));
+                            Tape.append("$");
+                        }
                     }
                     else if(transition.shift == 'L'){
                         index--;
+
+                        if(index == 0){
+                            index = 1;
+                        }
                     }
                     else{
                         throw new InterruptedException("ERROR: Wrong shift symbol!");
                     }
+                    
+                    transitionCount++;
+                    lastTransition = transition;
 
-                    break;
+                    break; //transition yoksa reject etsin
 
                 }
             }
